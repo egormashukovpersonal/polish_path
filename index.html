@@ -9,7 +9,7 @@
     body {
       margin: 0;
       padding: 32px;
-      background: #0f0f0f;
+      background: #212121;
       font-family: system-ui, sans-serif;
       color: #fff;
     }
@@ -43,20 +43,21 @@
     }
 
     .cell {
-      flex: 0 0 10%;
+      flex: 0 0 20%;
       padding: 4px;
       box-sizing: border-box;
     }
 
     button {
       width: 100%;
-      background: #1e1e1e;
+      background: #303030;
       color: #fff;
       border: 1px solid #333;
       border-radius: 999px;
       padding: 10px 0;
       font-size: 14px;
       cursor: pointer;
+      font-size: 40px;
     }
 
     button:hover {
@@ -79,8 +80,8 @@
   const path = document.getElementById("path");
 
   const MAX_LEVELS = 1000;
-  const ROW_SIZE = 10;
-  const TURN_ROWS = 2;
+  const ROW_SIZE = 5;
+  const TURN_ROWS = 1;
 
   let level = 1;
   let direction = "forward"; // forward | backward
