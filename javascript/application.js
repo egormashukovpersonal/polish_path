@@ -330,7 +330,7 @@ function renderLevel(level, index = 0) {
         : `<button class="next-btn" onclick="finishLevel(${level})">Finish level ✓</button>`
     }
 
-    <h2>Level ${level}</h2>
+    <h2 class="header-h2">Level ${level}</h2>
 
     <div class="char-card">
       <div class="progress">${index + 1} / ${chars.length}</div>
@@ -408,7 +408,7 @@ function renderSrs() {
       ${isLast ? "Finish ✓" : "Next →"}
     </button>
 
-    <h2>SRS</h2>
+    <h2 class='header-h2'>SRS</h2>
 
     <div class="char-card">
       <div class="progress">${index + 1} / ${chars.length}</div>

@@ -84,15 +84,16 @@ button:hover {
   text-align: center;
 }
 .pinyin {
-  font-size: 40px;
+  font-size: 60px;
   text-align: center;
 }
 .section {
-  font-size: 30px;
+  font-size: 50px;
 }
 
 .progress {
   opacity: 0.6;
+  font-size: 30px;
   margin-bottom: 8px;
 }
 
@@ -117,7 +118,7 @@ button:hover {
 .speak-btn {
   border: none;
   background: none;
-  font-size: 20px;
+  font-size: 60px;
   cursor: pointer;
   opacity: 0.8;
   width: 7%;
@@ -208,4 +209,10 @@ button.locked {
 
 .srs-size-menu {
   margin-bottom: 40px;
+}
+h1 {
+  font-size: 100px;
+}
+.header-h2 {
+  font-size: 40px;
 }
