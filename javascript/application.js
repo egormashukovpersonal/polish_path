@@ -527,7 +527,7 @@ function isIgnoredFromSrs(hanzi) {
 }
 function handleSwipe() {
   const diff = touchEndX - touchStartX;
-  if (Math.abs(diff) < 50) return;
+  if (Math.abs(diff) < 120) return;
 
   const hash = location.hash;
 
@@ -578,7 +578,8 @@ function handleSwipe() {
 }
 
 let touchStartX = 0;
-let touchEndX = 0;
+let touchStartY = 0;
+let touchStartTime = 0;
 
 document.addEventListener("touchstart", e => {
   touchStartX = e.changedTouches[0].screenX;
