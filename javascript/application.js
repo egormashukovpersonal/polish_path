@@ -1,11 +1,11 @@
 const LEVELS_PER_ROW = 5;
 const TURN_LENGTH = 1;
-const CHARS_PER_LEVEL = 3;
+const WORDS_PER_LEVEL = 10;
 
 let HSK = [];
 
 async function loadHSK() {
-  const res = await fetch("./data/hsk1.json");
+  const res = await fetch("./data/result_shuffled.json");
   HSK = await res.json();
 }
 
@@ -15,6 +15,7 @@ const app = document.getElementById("app");
 function router() {
   const hash = location.hash;
   const srsBtn = document.getElementById("srs-btn");
+
 
   if (!hash || hash === "#") {
     renderPath();
@@ -123,7 +124,7 @@ function selectSrsSize(value) {
 
 function renderPath() {
   const maxId = Math.max(...HSK.map(c => c.id));
-  const totalLevels = Math.ceil(maxId / CHARS_PER_LEVEL);
+  const totalLevels = Math.ceil(maxId / WORDS_PER_LEVEL);
 
   app.innerHTML = `
     <div class="fixed-bottom">
@@ -233,7 +234,7 @@ function getAllLearnedChars() {
     chars.push(...getCharsForLevel(level));
   });
 
-  return chars.filter(c => !isIgnoredFromSrs(c.hanzi));
+  return chars.filter(c => !isIgnoredFromSrs(c.russian_translation));
 }
 
 
@@ -297,8 +298,8 @@ function range(a, b) {
 }
 
 function getCharsForLevel(level) {
-  const startId = (level - 1) * CHARS_PER_LEVEL + 1;
-  const endId = startId + CHARS_PER_LEVEL - 1;
+  const startId = (level - 1) * WORDS_PER_LEVEL + 1;
+  const endId = startId + WORDS_PER_LEVEL - 1;
   return HSK.filter(c => c.id >= startId && c.id <= endId);
 }
 
@@ -330,34 +331,30 @@ function renderLevel(level, index = 0) {
           ? `<button class="next-btn" onclick="location.hash='#/level/${level}/${index + 1}'">→</button>`
           : `<button class="next-btn" onclick="finishLevel(${level})">✓</button>`
       }
-      <button class="speak-btn" onclick="speak2('${c.hanzi}')">🔊</button>
+      <button class="speak-btn" onclick="speak('${c.polish_word}')">🔊</button>
     </div>
 
     <h1>Level ${level}</h1>
 
     <div class="char-card">
       <div class="progress">${index + 1} / ${chars.length}</div>
-      <div class="hanzi">${c.hanzi}</div>
+      <div class="russian_translation">${c.russian_translation}</div>
       <button id="toggle-meaning" class="secondary-btn">Open</button>
       <div id="meaning" style="display:none">
-        <div class="pinyin-row">
-          <span class="pinyin">${c.pinyin}</span>
+        <div class="polish_word-row">
+          <span class="polish_word">${c.polish_word}</span>
         </div>
 
-        <div class="section">Перевод: ${c.ru_translations.join(", ")}</div>
-        <div class="section">Translation: ${c.translations.join(", ")}</div>
+        <div class="section">Перевод: ${c.polish_word}</div>
 
-        <h1>Deepseek</h1>
-        <p class="section">${c.deepseek_description_paragraph_1 || ""}</p>
-        <p class="section">${c.deepseek_description_paragraph_2 || ""}</p>
-        <p class="section">${c.deepseek_description_paragraph_3 || ""}</p>
-        <p class="section">${c.deepseek_description_paragraph_4 || ""}</p>
+        <h1>Usage</h1>
+        <p class="section">${c.usage_example || ""}</p>
 
-        <h1>ChatGPT</h1>
-        <p class="section">${c.chatgpt_description_paragraph_1 || ""}</p>
-        <p class="section">${c.chatgpt_description_paragraph_2 || ""}</p>
-        <p class="section">${c.chatgpt_description_paragraph_3 || ""}</p>
-        <p class="section">${c.chatgpt_description_paragraph_4 || ""}</p>
+        <h1>Description</h1>
+        <p class="section">${c.polish_description || ""}</p>
+
+        <h1>Description</h1>
+        <p class="section">${c.russian_description || ""}</p>
       </div>
     </div>
   `;
@@ -375,7 +372,7 @@ function ignoreCurrentSrsChar() {
 
   const c = session.chars[session.index];
 
-  ignoreCharFromSrs(c.hanzi);
+  ignoreCharFromSrs(c.russian_translation);
 
   // сразу убираем из текущей сессии
   session.chars.splice(session.index, 1);
@@ -413,28 +410,28 @@ function renderSrs() {
       <button class="next-srs-btn"  onclick="nextSrs()">
         ${isLast ? "✓" : "→"}
       </button>
-      <button class="speak-btn" onclick="speak2('${c.hanzi}')">🔊</button>
+      <button class="speak-btn" onclick="speak('${c.polish_word}')">🔊</button>
     </div>
 
     <h1>SRS</h1>
 
     <div class="char-card">
       <div class="progress">${index + 1} / ${chars.length}</div>
-      <div class="hanzi">${c.hanzi}</div>
+      <div class="russian_translation">${c.russian_translation}</div>
       <button id="toggle-meaning" class="secondary-btn">Open</button>
       <div id="meaning" style="display:none">
-        <div class="pinyin-row">
-          <span class="pinyin">${c.pinyin}</span>
+        <div class="polish_word-row">
+          <span class="polish_word">${c.polish_word}</span>
         </div>
 
-        <div class="section">Перевод: ${c.ru_translations.join(", ")}</div>
-        <div class="section">Translation: ${c.translations.join(", ")}</div>
+        <h1>Usage</h1>
+        <p class="section">${c.usage_example || ""}</p>
 
-        <h1>Deepseek</h1>
-        <p class="section">${c.deepseek_description_paragraph_1 || ""}</p>
-        <p class="section">${c.deepseek_description_paragraph_2 || ""}</p>
-        <p class="section">${c.deepseek_description_paragraph_3 || ""}</p>
-        <p class="section">${c.deepseek_description_paragraph_4 || ""}</p>
+        <h1>Description</h1>
+        <p class="section">${c.polish_description || ""}</p>
+
+        <h1>Description</h1>
+        <p class="section">${c.russian_description || ""}</p>
       </div>
     </div>
   `;
@@ -514,16 +511,16 @@ function renderSrsMonth() {
   html += `</div>`;
   return html;
 }
-function ignoreCharFromSrs(hanzi) {
+function ignoreCharFromSrs(russian_translation) {
   const progress = getProgress();
   progress.ignoredFromSrs ||= {};
-  progress.ignoredFromSrs[hanzi] = true;
+  progress.ignoredFromSrs[russian_translation] = true;
   saveProgress(progress);
 }
 
-function isIgnoredFromSrs(hanzi) {
+function isIgnoredFromSrs(russian_translation) {
   const progress = getProgress();
-  return !!progress.ignoredFromSrs?.[hanzi];
+  return !!progress.ignoredFromSrs?.[russian_translation];
 }
 function handleSwipe() {
   const diff = touchEndX - touchStartX;

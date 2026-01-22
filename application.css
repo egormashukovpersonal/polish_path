@@ -82,11 +82,11 @@ button:hover {
   }
 }
 
-.hanzi {
+.russian_translation {
   font-size: 300px;
   text-align: center;
 }
-.pinyin {
+.polish_word {
   font-size: 60px;
   text-align: center;
 }
@@ -114,7 +114,7 @@ button:hover {
   left: 0px;
 }
 
-.pinyin-row {
+.polish_word-row {
   display: flex;
   align-items: center;
   justify-content: center;

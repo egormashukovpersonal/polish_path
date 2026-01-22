@@ -1,67 +1,50 @@
 require "json"
+require "csv"
 require "httparty"
 require "dotenv/load"
+require "set"
 
 API_URL = "https://api.openai.com/v1/chat/completions"
 MODEL = "gpt-4.1"
-DATA_FILE = "data/hsk1.json"
 
-def generate_for_chatgpt(char_data)
+SOURCE_DATA_FILE = "data/subtlex-pl.csv"
+DEST_DATA_FILE   = "data/result.json"
+
+def generate_for_chatgpt(words)
   prompt = <<~PROMPT
-    Ты помогаешь мне создать персональную систему изучения китайских SIMPLIFIED иероглифов.
+    Я учу польский язык.
 
-    Для иероглифа: #{char_data["hanzi"]}
-    Пиньинь: #{char_data["pinyin"]}
+    Даю тебе список слов, а ты мне в ответ JSON.
+    Формат ответа: Верни ТОЛЬКО JSON-массив объектов со следующими ключами:
 
-    В ответе сгенерируй СТРОГО JSON со следующими ключами:
+    - polish_word - String
+    - russian_translation - String
+    - russian_description - 1-2 предложения описание слова по русски
+    - polish_description - 1-2 предложения описание слова по польски
+    - usage_example - String - 1 предложение по польски с использованием слова
 
-    ru_translations:
-    - массив из 1–2 кратких переводов на русском
-    - если возможно — один перевод
-    - не дублируй синонимы
+    Правила:
+    - Никакого текста вне JSON
+    - Без Markdown
+    - Без вступлений и пояснений
+    - Используй ТОЛЬКО слова из предоставленного списка.
+    - НЕ добавляй новые слова.
+    - НЕ заменяй слова на другие.
 
-    chatgpt_description_paragraph_1:
-    - общее понятное объяснение иероглифа
-    - что он означает в современном языке
-
-    chatgpt_description_paragraph_2:
-    - разбор структуры иероглифа
-    - если иероглиф составной — объясни каждый компонент
-    - если есть радикал — упомяни его роль
-
-    chatgpt_description_paragraph_3:
-    - как и где иероглиф обычно используется
-    - устойчивые контексты, оттенки значения
-
-    chatgpt_description_paragraph_4:
-    - краткий культурный или философский аспект
-    - ТОЛЬКО если он реально уместен
-    - без эзотерики и надуманных обобщений
-
-    Ограничения:
-    - Пиши так, чтобы текст добавлял новое понимание, а не повторял очевидное значение слова.
-    - Избегай популярных «разборов по частям», если они не дают реального понимания значения.
-    - избегай очевидностей, делай более плотнее по информации и полезности
-    - каждый параграф — 2–4 предложений
-    - никакого булшита, абстрактной эзотерики и надуманных историй
-    - если информации недостаточно — пиши просто и честно
-    - когда пишешь иероглиф ВСЕГДА рядом добавляй пиньинь
-
-    Никакого текста вне JSON.
-    Без Markdown.
-    Без вступлений.
+    Вот сами слова:
+    #{words.join(", ")}
   PROMPT
 
   response = HTTParty.post(
     API_URL,
     headers: {
       "Authorization" => "Bearer #{ENV['OPENAI_API_KEY']}",
-      "Content-Type" => "application/json"
+      "Content-Type"  => "application/json"
     },
     body: {
       model: MODEL,
       messages: [{ role: "user", content: prompt }],
-      temperature: 0.7
+      temperature: 0.2
     }.to_json
   )
 
@@ -69,36 +52,71 @@ def generate_for_chatgpt(char_data)
   JSON.parse(content)
 end
 
-data = JSON.parse(File.read(DATA_FILE))
+words = []
+CSV.foreach(SOURCE_DATA_FILE, headers: true, col_sep: "\t") do |row|
+  words << row["spelling"]
+  break if words.size >= 20_000
+end
 
-data.each_with_index do |char_data, i|
-  hanzi = char_data["hanzi"] || char_data["char"]
+puts "Загружено слов: #{words.size}"
 
-  puts "→ #{hanzi} (#{i + 1}/#{data.size})"
-
-  # если философия уже есть — считаем, что объект обработан
-  if char_data.key?("chatgpt_description_paragraph_1") && !char_data["chatgpt_description_paragraph_1"].to_s.strip.empty?
-    puts "  пропуск — уже есть chatgpt_description_paragraph_1"
-    next
+result_data =
+  if File.exist?(DEST_DATA_FILE)
+    JSON.parse(File.read(DEST_DATA_FILE))
+  else
+    []
   end
 
+CHUNK_SIZE = 20
+MAX_RETRIES = 5
+RETRY_SLEEP = 5 # секунд
+
+processed_chunks = (result_data.size.to_f / CHUNK_SIZE).floor
+
+words.each_slice(CHUNK_SIZE).with_index do |chunk, index|
+  next if index < processed_chunks
+
+  retries = 0
+
   begin
-    result = generate_for_chatgpt(char_data)
+    puts "→ Step #{index + 1} | total words: #{result_data.size}"
 
-    # аккуратно вмерживаем новые поля
-    char_data.merge!(result)
+    generated = generate_for_chatgpt(chunk)
 
-    # сразу сохраняем файл (идемпотентность)
+    # страховка от дублей
+    existing = result_data.map { |w| w["polish_word"].downcase }.to_set
+    generated.reject! { |w| existing.include?(w["polish_word"].downcase) }
+
+    result_data.concat(generated)
+
     File.write(
-      DATA_FILE,
-      JSON.pretty_generate(data, ensure_ascii: false)
+      DEST_DATA_FILE,
+      JSON.pretty_generate(result_data, ensure_ascii: false)
     )
 
     sleep 1.5
+
+  rescue Net::ReadTimeout, Timeout::Error, Errno::ECONNRESET => e
+    retries += 1
+    puts "⏳ Timeout в чанке #{index + 1}, попытка #{retries}/#{MAX_RETRIES}"
+
+    if retries <= MAX_RETRIES
+      sleep RETRY_SLEEP * retries # backoff
+      retry
+    else
+      puts "❌ Превышено число повторов в чанке #{index + 1}"
+      break
+    end
+
+  rescue JSON::ParserError => e
+    puts "❌ Некорректный JSON в чанке #{index + 1}: #{e.message}"
+    break
+
   rescue => e
-    puts "  ошибка: #{e.class}: #{e.message}"
-    puts "  stack trace:"
-    e.backtrace.each { |line| puts "    #{line}" }
+    puts "❌ Фатальная ошибка в чанке #{index + 1}: #{e.class} — #{e.message}"
     break
   end
 end
+
+
+puts "✅ Готово. Итоговых слов: #{result_data.size}"
