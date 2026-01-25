@@ -1,5 +1,5 @@
 const LEVELS_PER_ROW = 5;
-const TURN_LENGTH = 1;
+const TURN_LENGTH = 0;
 const WORDS_PER_LEVEL = 10;
 
 let HSK = [];
@@ -177,6 +177,21 @@ function renderPath() {
   }
 }
 
+
+function getPolishPreviewForLevel(level) {
+  return getCharsForLevel(level)
+    .filter(c => !isIgnoredFromSrs(c.polish_word))
+    .map(c => c.polish_word)
+    .join("");
+}
+
+
+function getCharsForLevel(level) {
+  const startId = (level - 1) * WORDS_PER_LEVEL + 1;
+  const endId = startId + WORDS_PER_LEVEL - 1;
+  return HSK.filter(c => c.id >= startId && c.id <= endId);
+}
+
 function createRow(container, direction, start, end) {
   const row = document.createElement("div");
   row.className = "row";
@@ -186,12 +201,27 @@ function createRow(container, direction, start, end) {
       ? range(start, end)
       : range(start, end).reverse();
 
-  levels.forEach(lvl => {
+  const count = levels.length;
+
+  levels.forEach((lvl, index) => {
     const cell = document.createElement("div");
     cell.className = "cell";
 
     const btn = document.createElement("button");
     btn.textContent = lvl;
+
+    // 🔹 zigzag offset (same logic, just array-based)
+    if (direction !== "forward") {
+      const step = 20;
+      const offset =
+        direction === "forward"
+          ? index * step
+          : (count - 1 - index) * step;
+
+      btn.style.marginTop = `${offset}px`;
+    }
+
+
     if (isLevelCompleted(lvl)) {
       btn.classList.add("completed");
     }
