@@ -1,4 +1,4 @@
-const LEVELS_PER_ROW = 5;
+const LEVELS_PER_ROW = 4;
 const TURN_LENGTH = 0;
 const WORDS_PER_LEVEL = 10;
 
@@ -9,6 +9,12 @@ async function loadHSK() {
   HSK = await res.json();
 }
 
+
+(function initPreviewSettings() {
+  if (localStorage.getItem("usePolish") === null) {
+    localStorage.setItem("usePolish", "false");
+  }
+})();
 
 const app = document.getElementById("app");
 
@@ -116,8 +122,7 @@ function toggleSrsSize() {
 function selectSrsSize(value) {
   setSrsLimit(value);
 
-  document.getElementById("srs-size-btn").textContent =
-    `SRS: ${value}`;
+  document.getElementById("srs-size-btn").textContent = `${value}`;
 
   document.getElementById("srs-size-menu").style.display = "none";
 }
@@ -126,12 +131,21 @@ function renderPath() {
   const maxId = Math.max(...HSK.map(c => c.id));
   const totalLevels = Math.ceil(maxId / WORDS_PER_LEVEL);
 
+  const visibleLevels = [];
+  for (let lvl = 1; lvl <= totalLevels; lvl++) {
+    if (!isLevelEmpty(lvl)) {
+      visibleLevels.push(lvl);
+    }
+  }
+
   app.innerHTML = `
     <div class="fixed-bottom">
       <button id='srs-btn' onclick='startSrsSession()'>SRS</button>
-      <button class="stats-toggle" onclick="toggleSrsCalendar()">📊</button>
-      <button class="dev-toggle" onclick="toggleRestore()">⚙️</button>
-      <button class="srs-size-btn" onclick="toggleSrsSize()" id="srs-size-btn">SRS: ${getSrsLimit()}</button>
+      <button class="stats-toggle" onclick="toggleSrsCalendar()">▦</button>
+      <button class="dev-toggle" onclick="toggleRestore()">⚙︎</button>
+      <button class="toggle-polish-translations" onclick="togglePolishTranslations()" id="srs-size-btn">PL</button>
+      <button class="toggle-russian-translations" onclick="togglePolishTranslations()" id="srs-size-btn">RU</button>
+      <button class="srs-size-btn" onclick="toggleSrsSize()" id="srs-size-btn">${getSrsLimit()}</button>
     </div>
 
     <div id="srs-calendar" style="display:none"></div>
@@ -156,22 +170,28 @@ function renderPath() {
 
     <div class='path' id='path'></div>
   `;
+
   const path = document.getElementById("path");
 
-  let level = 1;
+  let index = 0;
   let direction = "forward";
 
-  while (level <= totalLevels) {
-    const rowStart = level;
-    const rowEnd = Math.min(level + LEVELS_PER_ROW - 1, totalLevels);
+  while (index < visibleLevels.length) {
+    const rowLevels = visibleLevels.slice(
+      index,
+      index + LEVELS_PER_ROW
+    );
 
-    createRow(path, direction, rowStart, rowEnd);
-    level = rowEnd + 1;
+    createRowFromLevels(path, direction, rowLevels);
+    index += rowLevels.length;
 
-    if (level > totalLevels) break;
+    if (index >= visibleLevels.length) break;
 
-    createTurn(path, direction, level);
-    level += TURN_LENGTH;
+    if (TURN_LENGTH > 0) {
+      const turnLevels = visibleLevels.slice(index, index + TURN_LENGTH);
+      createTurnFromLevels(path, direction, turnLevels);
+      index += turnLevels.length;
+    }
 
     direction = direction === "forward" ? "backward" : "forward";
   }
@@ -192,6 +212,88 @@ function getCharsForLevel(level) {
   return HSK.filter(c => c.id >= startId && c.id <= endId);
 }
 
+function isLevelEmpty(level) {
+  return getWordsPreviewForLevel(level).length === 0;
+}
+
+function togglePolishTranslations() {
+  const current = localStorage.getItem("usePolish") !== "false";
+  localStorage.setItem("usePolish", current ? "false" : "true");
+  renderPath();
+}
+
+function getWordsPreviewForLevel(level) {
+  let usePolish = localStorage.getItem("usePolish") !== "false";
+  let filtered = getCharsForLevel(level).filter(c => !isIgnoredFromSrs(c.polish_word))
+
+  return filtered.map((c, i) =>
+      usePolish ? `<div>${c.polish_word}</div>` : `<div>${c.russian_translation}</div>`
+    ).join("");
+}
+
+function createRowFromLevels(container, direction, levels) {
+  const row = document.createElement("div");
+  row.className = "row";
+
+  const orderedLevels =
+    direction === "forward"
+      ? levels
+      : [...levels].reverse();
+
+  const count = orderedLevels.length;
+
+  orderedLevels.forEach((lvl, index) => {
+    const cell = document.createElement("div");
+    cell.className = "cell";
+
+    const btn = document.createElement("button");
+
+    const levelNum = document.createElement("div");
+    levelNum.className = "level-number";
+    levelNum.textContent = lvl;
+    btn.appendChild(levelNum);
+
+    if (isLevelCompleted(lvl)) {
+      const polish = document.createElement("div");
+      polish.innerHTML = getWordsPreviewForLevel(lvl);
+      btn.appendChild(polish);
+    }
+
+    // 🔹 zigzag offset (same logic, just array-based)
+    if (direction !== "forward") {
+      const step = 20;
+      const offset =
+        direction === "forward"
+          ? index * step
+          : (count - 1 - index) * step;
+
+      btn.style.marginTop = `${offset}px`;
+    }
+
+    if (isLevelCompleted(lvl)) {
+      btn.classList.add("completed");
+    }
+
+    const nextAvailable = getNextAvailableLevel();
+
+    if (lvl > nextAvailable) {
+      btn.classList.add("locked");
+      btn.disabled = true;
+    } else {
+      btn.onclick = () => {
+        location.hash = `/level/${lvl}`;
+        window.location.reload();
+      };
+    }
+
+    cell.appendChild(btn);
+    row.appendChild(cell);
+  });
+
+  container.appendChild(row);
+}
+
+
 function createRow(container, direction, start, end) {
   const row = document.createElement("div");
   row.className = "row";
@@ -208,7 +310,15 @@ function createRow(container, direction, start, end) {
     cell.className = "cell";
 
     const btn = document.createElement("button");
-    btn.textContent = lvl;
+
+    if (isLevelCompleted(lvl)) {
+      const polish = document.createElement("div");
+      polish.className = "level-polish";
+      polish.innerHTML = getWordsPreviewForLevel(lvl);
+      btn.appendChild(polish);
+    } else {
+      btn.textContent = lvl;
+    }
 
     // 🔹 zigzag offset (same logic, just array-based)
     if (direction !== "forward") {
@@ -264,7 +374,7 @@ function getAllLearnedChars() {
     chars.push(...getCharsForLevel(level));
   });
 
-  return chars.filter(c => !isIgnoredFromSrs(c.russian_translation));
+  return chars.filter(c => !isIgnoredFromSrs(c.polish_word));
 }
 
 
@@ -400,7 +510,7 @@ function ignoreCurrentSrsChar() {
 
   const c = session.chars[session.index];
 
-  ignoreCharFromSrs(c.russian_translation);
+  ignoreCharFromSrs(c.polish_word);
 
   // сразу убираем из текущей сессии
   session.chars.splice(session.index, 1);
@@ -519,7 +629,7 @@ function renderSrsMonth() {
   const daysInMonth = new Date(year, month + 1, 0).getDate();
   const firstDay = new Date(year, month, 1).getDay() || 7;
 
-  let html = `<div class="calendar-grid">`;
+  let html = `<h1>SRS Calendar</h1><div class="calendar-grid">`;
 
   // пустые ячейки перед началом месяца
   for (let i = 1; i < firstDay; i++) {
@@ -539,16 +649,16 @@ function renderSrsMonth() {
   html += `</div>`;
   return html;
 }
-function ignoreCharFromSrs(russian_translation) {
+function ignoreCharFromSrs(polish_word) {
   const progress = getProgress();
   progress.ignoredFromSrs ||= {};
-  progress.ignoredFromSrs[russian_translation] = true;
+  progress.ignoredFromSrs[polish_word] = true;
   saveProgress(progress);
 }
 
-function isIgnoredFromSrs(russian_translation) {
+function isIgnoredFromSrs(polish_word) {
   const progress = getProgress();
-  return !!progress.ignoredFromSrs?.[russian_translation];
+  return !!progress.ignoredFromSrs?.[polish_word];
 }
 function handleSwipe() {
   const diff = touchEndX - touchStartX;
