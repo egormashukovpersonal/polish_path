@@ -206,13 +206,7 @@ button.locked {
   border: none;
   font-size: 50px;
 }
-.toggle-polish-translations {
-  width: 10%;
-  background: none !important;
-  border: none;
-  font-size: 50px;
-}
-.toggle-russian-translations {
+.toggle-translations {
   width: 10%;
   background: none !important;
   border: none;
@@ -258,9 +252,10 @@ h1 {
   padding-top: 20px;
 }
 
-#meaning {
+#meaning-full {
   padding-bottom: 400px;
 }
+
 button.completed .level-number{
   display: none;
 }

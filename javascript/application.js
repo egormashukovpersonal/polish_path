@@ -143,8 +143,7 @@ function renderPath() {
       <button id='srs-btn' onclick='startSrsSession()'>SRS</button>
       <button class="stats-toggle" onclick="toggleSrsCalendar()">▦</button>
       <button class="dev-toggle" onclick="toggleRestore()">⚙︎</button>
-      <button class="toggle-polish-translations" onclick="togglePolishTranslations()" id="srs-size-btn">PL</button>
-      <button class="toggle-russian-translations" onclick="togglePolishTranslations()" id="srs-size-btn">RU</button>
+      <button class="toggle-translations" onclick="toggleHomeTranslations()">🅰︎</button>
       <button class="srs-size-btn" onclick="toggleSrsSize()" id="srs-size-btn">${getSrsLimit()}</button>
     </div>
 
@@ -216,7 +215,7 @@ function isLevelEmpty(level) {
   return getWordsPreviewForLevel(level).length === 0;
 }
 
-function togglePolishTranslations() {
+function toggleHomeTranslations() {
   const current = localStorage.getItem("usePolish") !== "false";
   localStorage.setItem("usePolish", current ? "false" : "true");
   renderPath();
@@ -480,12 +479,12 @@ function renderLevel(level, index = 0) {
       <div class="progress">${index + 1} / ${chars.length}</div>
       <div class="russian_translation">${c.russian_translation}</div>
       <button id="toggle-meaning" class="secondary-btn">Open</button>
-      <div id="meaning" style="display:none">
-        <div class="polish_word-row">
-          <span class="polish_word">${c.polish_word}</span>
-        </div>
 
-        <h1>Usage</h1>
+      <div id="example-masked" style="display:block">
+        <p class="section">${maskWordInUsage(c.usage_example, c.polish_word) || ""}</p>
+      </div>
+
+      <div id="meaning-full" style="display:none">
         <p class="section">${c.usage_example || ""}</p>
 
         <h1>Description</h1>
@@ -498,9 +497,13 @@ function renderLevel(level, index = 0) {
   `;
 
   const toggleBtn = document.getElementById("toggle-meaning");
+  const masked = document.getElementById("example-masked");
+  const full = document.getElementById("meaning-full");
+
   toggleBtn.onclick = () => {
-    toggleBtn.style.display = 'none'
-    document.getElementById("meaning").style.display = "block";
+    masked.style.display = "none";
+    full.style.display = "block";
+    toggleBtn.style.display = "none";
   };
 }
 
@@ -557,12 +560,12 @@ function renderSrs() {
       <div class="progress">${index + 1} / ${chars.length}</div>
       <div class="russian_translation">${c.russian_translation}</div>
       <button id="toggle-meaning" class="secondary-btn">Open</button>
-      <div id="meaning" style="display:none">
-        <div class="polish_word-row">
-          <span class="polish_word">${c.polish_word}</span>
-        </div>
 
-        <h1>Usage</h1>
+      <div id="example-masked" style="display:block">
+        <p class="section">${maskWordInUsage(c.usage_example, c.polish_word) || ""}</p>
+      </div>
+
+      <div id="meaning-full" style="display:none">
         <p class="section">${c.usage_example || ""}</p>
 
         <h1>Description</h1>
@@ -575,11 +578,25 @@ function renderSrs() {
   `;
 
   const toggleBtn = document.getElementById("toggle-meaning");
-  toggleBtn.onclick = () => {
-    toggleBtn.style.display = 'none'
-    document.getElementById("meaning").style.display = "block";
+  const masked = document.getElementById("example-masked");
+  const full = document.getElementById("meaning-full");
 
+  toggleBtn.onclick = () => {
+    masked.style.display = "none";
+    full.style.display = "block";
+    toggleBtn.style.display = "none";
   };
+
+}
+
+function maskWordInUsage(usage, word) {
+  if (!usage || !word) return usage;
+
+  const escaped = word.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  const mask = "*".repeat(word.length);
+
+  const regex = new RegExp(escaped, "gi");
+  return usage.replace(regex, mask);
 }
 
 function nextSrs() {
