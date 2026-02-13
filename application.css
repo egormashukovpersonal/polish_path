@@ -1,11 +1,3 @@
-html, body {
-  height: 100%;
-  overflow: hidden;
-  overscroll-behavior: none;
-  -webkit-overflow-scrolling: auto;
-  touch-action: manipulation;
-}
-
 body {
   margin: 0;
   padding: 32px;
@@ -13,7 +5,12 @@ body {
   font-family: system-ui, sans-serif;
   color: #fff;
 }
-
+.no-scroll {
+  overflow: hidden !important;
+  overscroll-behavior: none !important;
+  height: 100% !important;
+  touch-action: none !important;
+}
 #srs-btn {
   float: right;
   background: linear-gradient(135deg, #8e44ad, #3498db);

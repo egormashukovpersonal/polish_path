@@ -25,6 +25,7 @@ function router() {
 
 
   if (!hash || hash === "#") {
+    disableHardScrollLock();
     renderPath();
     if (srsBtn) {
       srsBtn.style.display = "block";
@@ -33,6 +34,7 @@ function router() {
   }
 
   if (hash === "#/srs") {
+    enableHardScrollLock();
     renderSrs();
     return;
   }
@@ -42,6 +44,7 @@ function router() {
   if (levelMatch) {
     const level = parseInt(levelMatch[1], 10);
     const index = parseInt(levelMatch[2] || "0", 10);
+    enableHardScrollLock();
     renderLevel(level, index);
     if (srsBtn) srsBtn.style.display = "none";
     return;
@@ -788,6 +791,25 @@ function isIgnoredFromSrs(polish_word) {
   const progress = getProgress();
   return !!progress.ignoredFromSrs?.[polish_word];
 }
+
+function enableHardScrollLock() {
+  document.documentElement.classList.add("no-scroll");
+  document.body.classList.add("no-scroll");
+
+  document.addEventListener("touchmove", preventScroll, { passive: false });
+}
+
+function disableHardScrollLock() {
+  document.documentElement.classList.remove("no-scroll");
+  document.body.classList.remove("no-scroll");
+
+  document.removeEventListener("touchmove", preventScroll);
+}
+
+function preventScroll(e) {
+  e.preventDefault();
+}
+
 
 (async function init() {
   await loadHSK();
