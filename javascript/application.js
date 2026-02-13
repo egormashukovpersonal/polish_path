@@ -556,9 +556,6 @@ function renderLevel(level, index = 0) {
 
         <h1>Description</h1>
         <p class="section">${c.polish_description || ""}</p>
-
-        <h1>Description</h1>
-        <p class="section">${c.russian_description || ""}</p>
       </div>
     </div>
   `;
@@ -664,9 +661,6 @@ function renderSrs() {
 
         <h1>Description</h1>
         <p class="section">${c.polish_description || ""}</p>
-
-        <h1>Description</h1>
-        <p class="section">${c.russian_description || ""}</p>
       </div>
     </div>
   `;

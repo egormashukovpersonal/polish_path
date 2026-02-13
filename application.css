@@ -1,3 +1,11 @@
+html, body {
+  height: 100%;
+  overflow: hidden;
+  overscroll-behavior: none;
+  -webkit-overflow-scrolling: auto;
+  touch-action: manipulation;
+}
+
 body {
   margin: 0;
   padding: 32px;
